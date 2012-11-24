@@ -1,49 +1,207 @@
+                ;*******************************************************************                       
+ FFE0           LCDWIR  EQU     0FFE0H   ; LCD IR 쓰기 
+ FFE1           LCDWDR  EQU     0FFE1H ; LCD DR 쓰기 
+ FFE2           LCDRIR  EQU     0FFE2H  ; LCD IR 읽기 
+ FFE3           LCDRDR  EQU     0FFE3H ; LCD DR 읽기 
+                
+                ;DEFINE VARIABLE ;******************************************************************** 
+ 0020           INST  EQU     20H ; LCD INSTRUCTION 값 보관 
+ 0021           DATA  EQU     21H ; LCD DATA 값 보관 
+ 0022           LROW  EQU     22H  ; LCD 표시 좌표: 행의 값 보관   
+ 0023           LCOL  EQU     23H ; LCD 표시 좌표: 열의 값 보관 
+ 0024           NUMFONT  EQU     24H ; message 개수 보관  
+ 0025           FDPL  EQU     25H ; DPL 값 보관 
+ 0026           FDPH  EQU     26H ; DPH 값 보관 
+                
+ 0080           HOUR EQU      80H
+ 0081           MIN  EQU      81H
+ 0082           SEC  EQU      82H
+                
+                
+                
+                ; DEFINE LCD INSTRUCTION  ;******************************************************************** 
+ 0001           CLEAR  EQU     01H  ; CLEAR 명령  
+                ; Cursor home  
+ 0002           CUR_HOME  EQU     02H  ; CURSOR HOME 위치로 이동  
+                ; 커서의 진행 방향을 제어하고,표시의 이동을 제어 
+ 0006           ENTRY2      EQU     06H     ; 어드레스를 1 증가 시키고, 커서나 블링크를 우로 이동  
+                ; 표시부 ON/OFF 제어 
+ 000E           DCB6         EQU     0EH     ; 표시(ON) ,커서(ON) ,블링크(OFF)  
+                ; Function setting 
+ 0038           FUN5         EQU     38H    ; 8비트 2행 5*7  1/16 듀티  
+                ; DDRAM Address setting 
+ 0080           LINE_1        EQU     80H     ;1 000 0000 : LCD 1 번째 줄로 이동 
+ 00C0           LINE_2        EQU     0C0H    ;1 010 0000 : LCD 2 번째 줄로 이동  
+                
+                
+                
  8000           ORG 8000H
- 8000 758901    MAIN: MOV TMOD,#00000001B
- 8003           ;GATE =0,TIMER MODE,RUN MODE 01
- 8003 75A882    MOV IE,#10000010B
- 8006           ;ENABLE ONLY TIMER 0
- 8006 758C4C    MOV TH0,#4CH
- 8009 758A00    MOV TL0,#00H
- 800C C3        CLR C
- 800D D28C      SETB TCON.TR0
- 800F 7414      MOV A #14H
- 8011 80FE      JMP $
- 8013           ; 무한루프를 돌다가 Interrupt 발생 시 SERVICE 루틴으로 가게 된다.
- 8013 C28C      SERVICE: CLR TCON.TR0
- 8015 D5E007    DJNZ A SERVICE2
- 8018 7414      MOV A #14H
- 801A 500C      JNC LEDON
- 801C 028035    JMP LEDOFF
+                
+                ;LCD initialization 
+ 8000 752038    LCD_INIT:    MOV      INST,#FUN5
+ 8003 1280BD                 CALL     INSTWR                                                     
+ 8006 75200E                 MOV      INST,#DCB6            
+ 8009 1280BD                 CALL    INSTWR 
+ 800C 752001                 MOV      INST,#CLEAR  
+ 800F 1280BD                 CALL     INSTWR  
+ 8012 752006                 MOV      INST,#ENTRY2 
+ 8015 1280BD                 CALL     INSTWR       
+                
+ 8018           ; Initial message 
+ 8018 752201    LCD_MESG:    MOV      LROW,#01H
+ 801B 752302                   MOV      LCOL,#02H
+ 801E 12809F                   CALL     CUR_MOV
+ 8021 9080D9                   MOV      DPTR,#MESSAGE1
+ 8024 858225                  MOV      FDPL,DPL
+ 8027 858326                  MOV      FDPH,DPH
+ 802A 75240E                  MOV      NUMFONT,#0EH
+ 802D 12808A                   CALL     DISFONT
+ 8030 752202                   MOV      LROW,#02H
+ 8033 752302                  MOV      LCOL,#02H
+ 8036 12809F                   CALL     CUR_MOV
+ 8039 9080E7                    MOV      DPTR,#MESSAGE2
+ 803C 858225                   MOV      FDPL,DPL
+ 803F 858326                   MOV      FDPH,DPH
+ 8042 75240E                    MOV      NUMFONT,#0EH
+ 8045 12808A                   CALL     DISFONT               
+ 8048           ;JMP      $ 
+                
+ 8048 758901    MAIN: MOV TMOD,#00000001B
+ 804B           ;GATE =0,TIMER MODE,RUN MODE 01
+ 804B 75A882    MOV IE,#10000010B
+ 804E           ;ENABLE ONLY TIMER 0
+ 804E 758C4C    MOV TH0,#4CH
+ 8051 758A00    MOV TL0,#00H
+ 8054 C3        CLR C
+ 8055 D28C      SETB TCON.TR0
+ 8057 7414      MOV A #14H
+ 8059 80FE      JMP $
+ 805B           ; 무한루프를 돌다가 Interrupt 발생 시 SERVICE 루틴으로 가게 된다.
+ 805B C28C      SERVICE: CLR TCON.TR0
+ 805D D5E007    DJNZ A SERVICE2
+ 8060 7414      MOV A #14H
+ 8062 500C      JNC LEDON
+ 8064 02807D    JMP LEDOFF
                 
                 
- 801F           SERVICE2:
- 801F 758C3C    MOV TH0,#3CH
- 8022 758AAF    MOV TL0,#0AFH
- 8025 D28C      SETB TCON.TR0
- 8027 32        RETI
+ 8067           SERVICE2:
+ 8067 758C3C    MOV TH0,#3CH
+ 806A 758AAF    MOV TL0,#0AFH
+ 806D D28C      SETB TCON.TR0
+ 806F 32        RETI
                 
- 8028 D3        LEDON: SETB C
- 8029 759000    MOV P1,#00H ; LED 켜기
- 802C 758C3C    MOV TH0,#3CH
- 802F 758AAF    MOV TL0,#0AFH
- 8032 D28C      SETB TCON.TR0
- 8034 32        RETI
- 8035 C3        LEDOFF: CLR C
- 8036 7590FF    MOV P1,#0FFH ; LED 끄기
- 8039 758C3C    MOV TH0,#3CH
- 803C 758AAF    MOV TL0,#0AFH
- 803F D28C      SETB TCON.TR0
- 8041 32        RETI
+ 8070 D3        LEDON: SETB C
+ 8071 759000    MOV P1,#00H ; LED 켜기
+ 8074 758C3C    MOV TH0,#3CH
+ 8077 758AAF    MOV TL0,#0AFH
+ 807A D28C      SETB TCON.TR0
+ 807C 32        RETI
+                
+ 807D C3        LEDOFF: CLR C
+ 807E 7590FF    MOV P1,#0FFH ; LED 끄기
+ 8081 758C3C    MOV TH0,#3CH
+ 8084 758AAF    MOV TL0,#0AFH
+ 8087 D28C      SETB TCON.TR0
+ 8089 32        RETI
+                
+                
+ 808A           ;********************************************************* 
+ 808A           ;*           서브 루틴: DISFONT                                 * 
+ 808A           ;*           입       력: 없음                                         * 
+ 808A           ;*           출       력: LCD        * 
+ 808A           ;*           기       능: 글자 폰트를 읽어와 LCD에 표시          * 
+ 808A           ;********************************************************* 
+ 808A 7D00      DISFONT:     MOV      R5,#00H       
+ 808C 852582    FLOOP:       MOV      DPL,FDPL
+ 808F 852683                   MOV      DPH,FDPH 
+ 8092 ED                       MOV      A,R5 
+ 8093 93                      MOVC     A,@A+DPTR 
+ 8094 F521                                     MOV      DATA,A  
+ 8096 1280C7                  CALL     DATAWR 
+ 8099 0D                      INC      R5 
+ 809A ED                      MOV      A,R5 
+ 809B B524EE                  CJNE     A,NUMFONT,FLOOP 
+ 809E 22                      RET        
+                
+                
+ 809F           ;********************************************************* 
+ 809F           ;*       서브 루틴: 커서의 위치 제어(CUR_MOV)                   * 
+ 809F           ;*       입       력: 커서의 행과 열 < LROW(행) ,LCOL(열) >       * 
+ 809F           ;*       출       력: LCD 화 면                                     *  
+ 809F           ;*       기       능: 커서 위치 조정                               * 
+ 809F           ;********************************************************* 
+ 809F E522      CUR_MOV:     MOV      A,LROW 
+ 80A1 B4010C                  CJNE     A,#01H, NEXT  
+ 80A4 7480                   MOV      A ,#LINE_1  
+ 80A6 2523                   ADD      A ,LCOL  
+ 80A8 F520                   MOV      INST,A  
+ 80AA 1280BD                 CALL     INSTWR   
+ 80AD 0280BC                JMP      RET_POINT
+ 80B0 B40209    NEXT:        CJNE     A,#02H, RET_POINT
+ 80B3 74C0                     MOV      A ,#LINE_2
+ 80B5 2523                     ADD      A ,LCOL 
+ 80B7 F520                    MOV      INST,A  
+ 80B9 1280BD                  CALL     INSTWR  
+ 80BC 22        RET_POINT:   RET 
+                
+                
+                
+ 80BD           ;********************************************************* 
+ 80BD           ;*         서브 루틴: INSTWR                                     * 
+ 80BD           ;*         입       력: INST                                       * 
+ 80BD           ;*         출       력: LCD 화 면                                   * 
+ 80BD           ;*         기       능: LCD INSTRUCTION 레지스터 쓰기             * 
+ 80BD           ;********************************************************* 
+ 80BD 1280D1    INSTWR:      CALL      INSTRD
+ 80C0 90FFE0                   MOV       DPTR,#LCDWIR 
+ 80C3 E520                    MOV       A,INST 
+ 80C5 F0                      MOVX      @DPTR,A 
+ 80C6 22                       RET 
+ 80C7           ;********************************************************* 
+ 80C7           ;*          서브 루틴: DATAW                                      * 
+ 80C7           ;*          입       력: DATA                                      *  
+ 80C7           ;*          출       력: LCD 화 면                                   * 
+ 80C7           ;*          기       능: LCD DATA 레지스터 쓰기                    * 
+ 80C7           ;********************************************************* 
+ 80C7 1280D1    DATAWR:      CALL      INSTRD 
+ 80CA 90FFE1                  MOV       DPTR,#LCDWDR
+ 80CD E521                     MOV       A,DATA
+ 80CF F0                       MOVX      @DPTR,A
+ 80D0 22                       RET 
+                
+                
+ 80D1           ;********************************************************* 
+ 80D1           ;*          서브 루틴: INSTRD                                     *  
+ 80D1           ;*          입       력: 없음                                       * 
+ 80D1           ;*          출       력: BUSY                                       * 
+ 80D1           ;*          기       능: 비지 플래그/어드레스 읽기                 * 
+ 80D1           ;********************************************************* 
+ 80D1 90FFE2    INSTRD:      MOV       DPTR,#LCDRIR
+ 80D4 E0                       MOVX      A,@DPTR 
+ 80D5 20E7F9                  JB        ACC.7,INSTRD 
+ 80D8 22                       RET                 
+ 80D9           ;********************************************************* 
+ 80D9           ;*         DEFINE  MESSAGE                                       * 
+ 80D9           ;********************************************************* 
+ 80D9 444F2059  MESSAGE1:    DB  'D','O',' ','Y','O' 
+ 80DE 55522042                DB  'U','R',' ','B','E' 
+ 80E3 53542021                DB  'S','T',' ','!' 
+ 80E7 594F5520               MESSAGE2:    DB  'Y','O','U',' ','C'
+ 80EC 414E2044                 DB  'A','N',' ','D','O' 
+ 80F1 20495421                DB  ' ','I','T','!'              
+                
+                
+                
+                
  9F0B           ORG 9F0BH
- 9F0B 028013    JMP SERVICE
+ 9F0B 02805B    JMP SERVICE
  9F0E           END
 
  PUSAN NATIONAL UNIVERSITY  8051 CROSS-ASSEMBLER        VERSION 1.20
 
                           Multiware & Image
 
- SOURCE FILE NAME: C:\USERS\FTC_SIL_PC02\DOCUMENTS\GITHUB\MICROPROCESSOR_LAB\WATCH.ASM
+ SOURCE FILE NAME: C:\USERS\HYUNSEOK\DOCUMENTS\GITHUB\MICROPROCESSOR_LAB\WATCH.ASM
 
 
 
