@@ -1,10 +1,16 @@
-                ;*******************************************************************                       
+ FFFFFFFF           ;*******************************************************************                       
  FFE0           LCDWIR  EQU     0FFE0H   ; LCD IR 쓰기 
  FFE1           LCDWDR  EQU     0FFE1H ; LCD DR 쓰기 
  FFE2           LCDRIR  EQU     0FFE2H  ; LCD IR 읽기 
  FFE3           LCDRDR  EQU     0FFE3H ; LCD DR 읽기 
                 
-                ;DEFINE VARIABLE ;******************************************************************** 
+ FFF0           DATAOUT    EQU     0FFF0H ;데이터 아웃의 주소 
+ FFF1           DATAIN     EQU     0FFF1H ;데이터 인의 주소  
+ FFC1           DLED       EQU     0FFC1H ;오른쪽 2개  7_SEGMENT의 주소 
+ FFC2           ALED0      EQU     0FFC2H ;중간 2개 7_SEGMENT의 주소 
+ FFC3           ALED1      EQU     0FFC3H ;왼쪽 2개 7_SEGMENT의 주소 
+                
+ FFFFFFFF           ;DEFINE VARIABLE ;******************************************************************** 
  0020           INST  EQU     20H ; LCD INSTRUCTION 값 보관 
  0021           DATA  EQU     21H ; LCD DATA 값 보관 
  0022           LROW  EQU     22H  ; LCD 표시 좌표: 행의 값 보관   
@@ -13,23 +19,30 @@
  0025           FDPL  EQU     25H ; DPL 값 보관 
  0026           FDPH  EQU     26H ; DPH 값 보관 
                 
- 0080           HOUR EQU      80H
- 0081           MIN  EQU      81H
- 0082           SEC  EQU      82H
+ 0030           VSEC       EQU     30H  ; 오른쪽 2개의 7_SEGMENT에 표시 될 값 보관 
+ 0031           VMIN       EQU     31H  ; 중간 2개의 7_SEGMENT에 표시 될 값 보관  
+ 0032           VHOUR      EQU     32H  ; 왼쪽 2개의 7_SEGMENT에 표시 될 값 보관 
+ 0033           VBUF       EQU     33H  ; 임시 보관 장소 
+                
+ FFFFFFFF           ;HOUR EQU      80H
+ FFFFFFFF           ;MIN  EQU      81H
+ FFFFFFFF           ;SEC  EQU      82H
+                
+ FFFFFFFF           ;상수 정의  
+ 0005           REP_COUNT EQU     5 
                 
                 
-                
-                ; DEFINE LCD INSTRUCTION  ;******************************************************************** 
+ FFFFFFFF           ; DEFINE LCD INSTRUCTION  ;******************************************************************** 
  0001           CLEAR  EQU     01H  ; CLEAR 명령  
-                ; Cursor home  
+ FFFFFFFF           ; Cursor home  
  0002           CUR_HOME  EQU     02H  ; CURSOR HOME 위치로 이동  
-                ; 커서의 진행 방향을 제어하고,표시의 이동을 제어 
+ FFFFFFFF           ; 커서의 진행 방향을 제어하고,표시의 이동을 제어 
  0006           ENTRY2      EQU     06H     ; 어드레스를 1 증가 시키고, 커서나 블링크를 우로 이동  
-                ; 표시부 ON/OFF 제어 
+ FFFFFFFF           ; 표시부 ON/OFF 제어 
  000E           DCB6         EQU     0EH     ; 표시(ON) ,커서(ON) ,블링크(OFF)  
-                ; Function setting 
+ FFFFFFFF           ; Function setting 
  0038           FUN5         EQU     38H    ; 8비트 2행 5*7  1/16 듀티  
-                ; DDRAM Address setting 
+ FFFFFFFF           ; DDRAM Address setting 
  0080           LINE_1        EQU     80H     ;1 000 0000 : LCD 1 번째 줄로 이동 
  00C0           LINE_2        EQU     0C0H    ;1 010 0000 : LCD 2 번째 줄로 이동  
                 
@@ -39,34 +52,34 @@
                 
                 ;LCD initialization 
  8000 752038    LCD_INIT:    MOV      INST,#FUN5
- 8003 1280BD                 CALL     INSTWR                                                     
+ 8003 128180                 CALL     INSTWR                                                     
  8006 75200E                 MOV      INST,#DCB6            
- 8009 1280BD                 CALL    INSTWR 
+ 8009 128180                 CALL    INSTWR 
  800C 752001                 MOV      INST,#CLEAR  
- 800F 1280BD                 CALL     INSTWR  
+ 800F 128180                 CALL     INSTWR  
  8012 752006                 MOV      INST,#ENTRY2 
- 8015 1280BD                 CALL     INSTWR       
+ 8015 128180                 CALL     INSTWR       
                 
  8018           ; Initial message 
  8018 752201    LCD_MESG:    MOV      LROW,#01H
  801B 752302                   MOV      LCOL,#02H
- 801E 12809F                   CALL     CUR_MOV
- 8021 9080D9                   MOV      DPTR,#MESSAGE1
+ 801E 128162                   CALL     CUR_MOV
+ 8021 90819C                   MOV      DPTR,#MESSAGE1
  8024 858225                  MOV      FDPL,DPL
  8027 858326                  MOV      FDPH,DPH
  802A 75240E                  MOV      NUMFONT,#0EH
- 802D 12808A                   CALL     DISFONT
+ 802D 12814D                   CALL     DISFONT
  8030 752202                   MOV      LROW,#02H
  8033 752302                  MOV      LCOL,#02H
- 8036 12809F                   CALL     CUR_MOV
- 8039 9080E7                    MOV      DPTR,#MESSAGE2
+ 8036 128162                   CALL     CUR_MOV
+ 8039 9081AA                    MOV      DPTR,#MESSAGE2
  803C 858225                   MOV      FDPL,DPL
  803F 858326                   MOV      FDPH,DPH
  8042 75240E                    MOV      NUMFONT,#0EH
- 8045 12808A                   CALL     DISFONT               
+ 8045 12814D                   CALL     DISFONT               
  8048           ;JMP      $ 
                 
- 8048 758901    MAIN: MOV TMOD,#00000001B
+ 8048 758901    MOV TMOD,#00000001B
  804B           ;GATE =0,TIMER MODE,RUN MODE 01
  804B 75A882    MOV IE,#10000010B
  804E           ;ENABLE ONLY TIMER 0
@@ -75,127 +88,327 @@
  8054 C3        CLR C
  8055 D28C      SETB TCON.TR0
  8057 7414      MOV A #14H
- 8059 80FE      JMP $
- 805B           ; 무한루프를 돌다가 Interrupt 발생 시 SERVICE 루틴으로 가게 된다.
- 805B C28C      SERVICE: CLR TCON.TR0
- 805D D5E007    DJNZ A SERVICE2
- 8060 7414      MOV A #14H
- 8062 500C      JNC LEDON
- 8064 02807D    JMP LEDOFF
+ 8059           ;JMP $
                 
                 
- 8067           SERVICE2:
- 8067 758C3C    MOV TH0,#3CH
- 806A 758AAF    MOV TL0,#0AFH
- 806D D28C      SETB TCON.TR0
- 806F 32        RETI
-                
- 8070 D3        LEDON: SETB C
- 8071 759000    MOV P1,#00H ; LED 켜기
- 8074 758C3C    MOV TH0,#3CH
- 8077 758AAF    MOV TL0,#0AFH
- 807A D28C      SETB TCON.TR0
- 807C 32        RETI
-                
- 807D C3        LEDOFF: CLR C
- 807E 7590FF    MOV P1,#0FFH ; LED 끄기
- 8081 758C3C    MOV TH0,#3CH
- 8084 758AAF    MOV TL0,#0AFH
- 8087 D28C      SETB TCON.TR0
- 8089 32        RETI
+ 8059 758160    MOV     SP,#60H    ; 스택 포인터의 위치를 이동  
+ 805C 753280    MOV     VHOUR,#80H ; VHOUR의 초기화            
+ 805F 753151    MOV     VMIN,#51H  ; VMIN의  초기화            
+ 8062 753000    MOV     VSEC,#00H  ; VSEC의  초기화            
+ 8065 12811D    CALL    DISPLAY 
                 
                 
- 808A           ;********************************************************* 
- 808A           ;*           서브 루틴: DISFONT                                 * 
- 808A           ;*           입       력: 없음                                         * 
- 808A           ;*           출       력: LCD        * 
- 808A           ;*           기       능: 글자 폰트를 읽어와 LCD에 표시          * 
- 808A           ;********************************************************* 
- 808A 7D00      DISFONT:     MOV      R5,#00H       
- 808C 852582    FLOOP:       MOV      DPL,FDPL
- 808F 852683                   MOV      DPH,FDPH 
- 8092 ED                       MOV      A,R5 
- 8093 93                      MOVC     A,@A+DPTR 
- 8094 F521                                     MOV      DATA,A  
- 8096 1280C7                  CALL     DATAWR 
- 8099 0D                      INC      R5 
- 809A ED                      MOV      A,R5 
- 809B B524EE                  CJNE     A,NUMFONT,FLOOP 
- 809E 22                      RET        
-                
-                
- 809F           ;********************************************************* 
- 809F           ;*       서브 루틴: 커서의 위치 제어(CUR_MOV)                   * 
- 809F           ;*       입       력: 커서의 행과 열 < LROW(행) ,LCOL(열) >       * 
- 809F           ;*       출       력: LCD 화 면                                     *  
- 809F           ;*       기       능: 커서 위치 조정                               * 
- 809F           ;********************************************************* 
- 809F E522      CUR_MOV:     MOV      A,LROW 
- 80A1 B4010C                  CJNE     A,#01H, NEXT  
- 80A4 7480                   MOV      A ,#LINE_1  
- 80A6 2523                   ADD      A ,LCOL  
- 80A8 F520                   MOV      INST,A  
- 80AA 1280BD                 CALL     INSTWR   
- 80AD 0280BC                JMP      RET_POINT
- 80B0 B40209    NEXT:        CJNE     A,#02H, RET_POINT
- 80B3 74C0                     MOV      A ,#LINE_2
- 80B5 2523                     ADD      A ,LCOL 
- 80B7 F520                    MOV      INST,A  
- 80B9 1280BD                  CALL     INSTWR  
- 80BC 22        RET_POINT:   RET 
+ 8068 1280E6    MAIN:      CALL    FINDKEYCODE   ; 키코드 값을 읽어오는 루틴 호출
+ 806B 20E40D               JB      ACC.4, ERR    ; 함수 키 이면, 에러 표시
+ 806E F533                 MOV     VBUF, A       ; 읽어온 키 코드 값을 VBUF에 보관
+ 8070 1280C3               CALL    SHIFT         ; 표시 이동 루틴 호출
+ 8073 12811D               CALL    DISPLAY       ; 이동된 값을 표시
+ 8076 128080               CALL    BOUNCE        ; 바운스 현상을 없애기 위한 루틴 호출
+ 8079 80ED                 JMP     MAIN          ; 반복 동작을 위한 분기 
                 
                 
                 
- 80BD           ;********************************************************* 
- 80BD           ;*         서브 루틴: INSTWR                                     * 
- 80BD           ;*         입       력: INST                                       * 
- 80BD           ;*         출       력: LCD 화 면                                   * 
- 80BD           ;*         기       능: LCD INSTRUCTION 레지스터 쓰기             * 
- 80BD           ;********************************************************* 
- 80BD 1280D1    INSTWR:      CALL      INSTRD
- 80C0 90FFE0                   MOV       DPTR,#LCDWIR 
- 80C3 E520                    MOV       A,INST 
- 80C5 F0                      MOVX      @DPTR,A 
- 80C6 22                       RET 
- 80C7           ;********************************************************* 
- 80C7           ;*          서브 루틴: DATAW                                      * 
- 80C7           ;*          입       력: DATA                                      *  
- 80C7           ;*          출       력: LCD 화 면                                   * 
- 80C7           ;*          기       능: LCD DATA 레지스터 쓰기                    * 
- 80C7           ;********************************************************* 
- 80C7 1280D1    DATAWR:      CALL      INSTRD 
- 80CA 90FFE1                  MOV       DPTR,#LCDWDR
- 80CD E521                     MOV       A,DATA
- 80CF F0                       MOVX      @DPTR,A
- 80D0 22                       RET 
+ 807B 12808F    ERR:       CALL    ERROR         ; 에러 표시 루틴 호출
+ 807E 80E8                   JMP     MAIN          ; 메인 루틴으로 복귀
+                  
+ 8080                      ; 눌러진 키가 떨어질 때까지 일정 시간 지연 
+ 8080 1280BA    BOUNCE:    CALL    DELAY         ; 시간 지연 루틴 호출    
+ 8083 7400      RELOAD:    MOV     A,#0          ; 키가 떨어 졌는지 체크
+ 8085 128114                 CALL    SUBKEY
+ 8088 F4                           CPL     A
+ 8089 70F8                  JNZ     RELOAD        ; 키가 떨어지지 않았으면, 다시 체크  
+ 808B 1280BA               CALL    DELAY         ; 시간 지연 루틴 호출
+ 808E 22                   RET                   ; 상위 루틴으로 복귀
+                
+ 808F           ;**************************************************** 
+ 808F           ;*        서브 루틴 : ERROR                         * 
+ 808F           ;*             입력 : 없음                          * 
+ 808F           ;*             출력 : 7_SEGMENT                     * 
+ 808F           ;*             기능 : REP_COUNT 에 지정된 횟수만큼  * 
+ 808F           ;*                    끄고 켜기를 반복              * 
+ 808F           ;**************************************************** 
+ 808F 7C05      ERROR:     MOV     R4,#REP_COUNT  
+ 8091 753000    ERR_1:               MOV     VSEC,#0 
+ 8094 753100               MOV     VMIN,#0
+ 8097 753200                MOV     VHOUR,#0
+ 809A 12811D                CALL    DISPLAY       ; 6개의 7_SEGMENT 켜기
+ 809D 7B0A                          MOV     R3,#10
+ 809F 1280BA    FIRST:    CALL    DELAY 
+ 80A2 DBFB                 DJNZ    R3,FIRST      ; 일정 시간 지연  
+ 80A4 7530FF               MOV     VSEC , #0FFH 
+ 80A7 7531FF               MOV     VMIN , #0FFH 
+ 80AA 7532FF               MOV     VHOUR, #0FFH 
+ 80AD 12811D               CALL    DISPLAY       ; 6개의 7_SEGMENT 켜기   
+ 80B0 7B0A                 MOV     R3,#10       
+ 80B2 1280BA    SECOND:    CALL    DELAY 
+ 80B5 DBFB                          DJNZ    R3,SECOND     ; 일정 시간 지연  
+ 80B7 DCD8                 DJNZ    R4,ERR_1      ; 반복 횟수 만큼 반복 했는지 체크 
+ 80B9 22                    RET                   ; 상위 루틴으로 복귀 
+                
+ 80BA           ;*************************************************** 
+ 80BA           ;*         서브 루틴 : DELAY                       * 
+ 80BA           ;*              입력 : 없음                        * 
+ 80BA           ;*              출력 : 없음                        * 
+ 80BA           ;*              기능 : R1*2+3 만큼의 시간 지연     * 
+ 80BA           ;*************************************************** 
+ 80BA 7820      DELAY:     MOV     R0,#020H  
+ 80BC 79FF      REPEAT:    MOV     R1,#0FFH 
+ 80BE D9FE                 DJNZ    R1,$ 
+ 80C0 D8FA                 DJNZ    R0,REPEAT 
+ 80C2 22                   RET                
+                
+ 80C3           ;*************************************************** 
+ 80C3           ;*         서브 루틴 : SHIFT                       * 
+ 80C3           ;*              입력 : VBUF                        * 
+ 80C3           ;*              출력 : VSEC,VMIN,VHOUR             * 
+ 80C3           ;*              기능 : 표시된 값을 왼쪽으로 이동   * 
+ 80C3           ;*                     시키기                      *
+ 80C3           ;*************************************************** 
+ 80C3 E532      SHIFT:     MOV     A,VHOUR 
+ 80C5 C4                   SWAP    A 
+ 80C6 F532                 MOV     VHOUR,A           
+ 80C8 E531                 MOV     A,VMIN 
+ 80CA C4                   SWAP    A   
+ 80CB F531                 MOV     VMIN,A            
+ 80CD E530                 MOV     A,VSEC 
+ 80CF C4                   SWAP    A   
+ 80D0 F530                 MOV     VSEC,A            
+ 80D2 E531                 MOV     A,VMIN 
+ 80D4 7832                 MOV     R0,#VHOUR 
+ 80D6 D6                   XCHD    A,@R0          
+ 80D7 F531                 MOV     VMIN,A  
+ 80D9 E530                 MOV     A,VSEC 
+ 80DB 7831                 MOV     R0,#VMIN 
+ 80DD D6                   XCHD    A,@R0       
+ 80DE F530                 MOV     VSEC,A  
+ 80E0 E533                 MOV     A,VBUF 
+ 80E2 7830                 MOV     R0,#VSEC    
+ 80E4 D6                   XCHD    A,@R0        ; 새로 입력된 키 값으로 바꿈 
+ 80E5 22                   RET 
+                
+ 80E6           ;*************************************************** 
+ 80E6           ;*         서브 루틴: FINDKEYCODE                  *  
+ 80E6           ;*              입력: A                            * 
+ 80E6           ;*              출력: A                            * 
+ 80E6           ;*              기능: 키 코드값을  찾아내기        * 
+ 80E6           ;*************************************************** 
+ 80E6 C0D0      FINDKEYCODE: PUSH    PSW        ; 스택에 PSW값을 보관
+ 80E8 D2D4                   SETB    PSW.4      ; 뱅크3 레지스터 사용
+ 80EA D2D3                   SETB    PSW.3  
+ 80EC 7900      INITIAL:    MOV     R1,#00H      ; R1값을 초기화 
+ 80EE 74EF                  MOV     A,#11101111B ; 데이터 아웃의 초기값 
+ 80F0 D3                   SETB    C               
+ 80F1 F8        COLSCAN:    MOV     R0,A         ; R0에 데이터 아웃 값 보관 
+ 80F2 09                     INC     R1           ; R1 열의 값 보관
+ 80F3 128114                CALL    SUBKEY       ; 키 패드 입력 상태 조사  
+ 80F6 B4FF07                CJNE    A,#0FFH,RSCAN ; 누산기의 값이 0FFH 가 아니면, 키 입력이 발생                               
+ 80F9 E8                       MOV     A,R0 
+ 80FA D3                    SETB    C 
+ 80FB 13                   RRC     A            ; 다음 열로 이동 
+ 80FC 50EE                 JNC     INITIAL      ; 모든 열을 스캔했으면,다시 시작 
+ 80FE 80F1                  JMP     COLSCAN      ; 다음 열의 스캔을 위한 분기  
+ 8100 7A00      RSCAN:      MOV     R2,#00H      ; R2 행의 값 보관 
+ 8102 13        ROWSCAN:    RRC     A            ; 어느 행이 1 로 바뀌었는지 조사
+ 8103 5003                  JNC     MATRIX       ; 캐리가 발생하면, MATRIX로 분기 
+ 8105 0A                    INC     R2           ; 캐리가 발생하지 않으면, 다음 행으로 이동 
+ 8106 80FA                 JMP     ROWSCAN      ; 다음 행의 스캔을 위한 분기 
+                
+ 8108 EA        MATRIX:     MOV     A,R2         ; R2에는 행의 값 보존 
+ 8109 75F005                MOV     B,#05H       ; 1행은 5열로 이루어짐 
+ 810C A4                   MUL     AB           ; 2차원 배열을 1차원 배열로 값을 바꿈 
+ 810D 29                    ADD     A,R1         ; R1에는 열의 값 보존 
+ 810E 129F0E                CALL    INDEX        ; 키 코드 값을 지정 
+ 8111 D0D0                  POP     PSW          ; 스택으로 부터 PSW 값을 가지고 옴 
+ 8113 22                    RET                  ; 상위 루틴으로 복귀 
+ 8114           ;***************************************************************** 
+ 8114           ;*          서브 루틴 : SUBKEY                                   * 
+ 8114           ;*               입력 : ACC                                      * 
+ 8114           ;*               출력 : ACC                                      * 
+ 8114           ;*               기능 : 데이터 아웃으로 데이터를 내보내고        * 
+ 8114           ;*                      데이터 인으로 결과를 확인                *  
+ 8114           ;***************************************************************** 
+ 8114 90FFF0    SUBKEY:     MOV     DPTR,#DATAOUT 
+ 8117 F0                    MOVX    @DPTR,A 
+ 8118 90FFF1                MOV     DPTR,#DATAIN 
+ 811B E0                    MOVX    A,@DPTR 
+ 811C 22                    RET 
+ 811D           ;***************************************************************** 
+ 811D           ;*          서브 루틴 : DISPLAY                                  * 
+ 811D           ;*               입력 : ACC                                      * 
+ 811D           ;*               출력 : ACC                                      * 
+ 811D           ;*               기능 : 키 코드값을 7_SEGMENT 로 표시            *
+ 811D           ;*****************************************************************  
+ 811D 90FFC1    DISPLAY:   MOV     DPTR,#DLED      ; 오른쪽 2개의 7_SEGMENT 지정 
+ 8120 E530                  MOV     A,VSEC        ; VSEC 값을 누산기로 
+ 8122 F0                    MOVX    @DPTR,A       ; VSEC 값의 표시  
+ 8123 90FFC2                MOV     DPTR,#ALED0   ; 중간 2개의 7_SEGMENT 지정 
+ 8126 E531                  MOV     A,VMIN        ; VMIN 값을 누산기로 
+ 8128 F0                    MOVX    @DPTR,A       ; VMIN 값의 표시
+                
+ 8129 90FFC3    MOV      DPTR,#ALED1   ; 오른쪽 2개의 7_SEGMENT 지정 
+ 812C E532                  MOV     A,VHOUR       ; VHOUR 값을 누산기로 
+ 812E F0                    MOVX    @DPTR,A       ; VHOUR 값의 표시 
+ 812F 22                    RET                   ; 상위 루틴으로 복귀    
+                
+ 8130           ;***************************************************************** 
+ 8130           ;*          서브 루틴 : INDEX                                    * 
+ 8130           ;*               입력 : ACC                                      * 
+ 8130           ;*               출력 : ACC                                      * 
+ 8130           ;*              기능 : 키 코드값을 정의                          *  
+ 8130           ;***************************************************************** 
+ 8130           ;DEFINE  FUNCTION KEY 
+ 0010           RWKEY       EQU     10H ;READ AND WRITE KEY 
+ 0011           INCKEY      EQU     11H ;INCRESE KEY(COMMA ,) 
+ 0012           ENDKEY      EQU     12H ;END KEY (PERIOD . ) 
+ 0013           GO          EQU     13H ;GO-KEY 
+ 0014           REG         EQU     14H ;REGISTER KEY 
+ 0015           DECKEY      EQU     15H ;DECRESE KEY 
+ 0016           CODE        EQU     16H ;CODE KEY 
+ 0017           ST          EQU     17H ;SINGLE STEP KEY 
+ 0018           RST         EQU     18H ;RST KEY   
                 
                 
- 80D1           ;********************************************************* 
- 80D1           ;*          서브 루틴: INSTRD                                     *  
- 80D1           ;*          입       력: 없음                                       * 
- 80D1           ;*          출       력: BUSY                                       * 
- 80D1           ;*          기       능: 비지 플래그/어드레스 읽기                 * 
- 80D1           ;********************************************************* 
- 80D1 90FFE2    INSTRD:      MOV       DPTR,#LCDRIR
- 80D4 E0                       MOVX      A,@DPTR 
- 80D5 20E7F9                  JB        ACC.7,INSTRD 
- 80D8 22                       RET                 
- 80D9           ;********************************************************* 
- 80D9           ;*         DEFINE  MESSAGE                                       * 
- 80D9           ;********************************************************* 
- 80D9 444F2059  MESSAGE1:    DB  'D','O',' ','Y','O' 
- 80DE 55522042                DB  'U','R',' ','B','E' 
- 80E3 53542021                DB  'S','T',' ','!' 
- 80E7 594F5520               MESSAGE2:    DB  'Y','O','U',' ','C'
- 80EC 414E2044                 DB  'A','N',' ','D','O' 
- 80F1 20495421                DB  ' ','I','T','!'              
+ 8130           ; 무한루프를 돌다가 Interrupt 발생 시 SERVICE 루틴으로 가게 된다.
+ 8130 C28C      SERVICE: CLR TCON.TR0
+ 8132 D5E00F    DJNZ A SERVICE2
+ 8135 7414      MOV A #14H
+ 8137 0530      INC VSEC
+ 8139 311D      CALL DISPLAY
+ 813B 758C3C    MOV TH0,#3CH
+ 813E 758AAF    MOV TL0,#0AFH
+ 8141 D28C      SETB TCON.TR0
+ 8143 32        RETI
+                
+                
+ 8144           SERVICE2:
+ 8144 758C3C    MOV TH0,#3CH
+ 8147 758AAF    MOV TL0,#0AFH
+ 814A D28C      SETB TCON.TR0
+ 814C 32        RETI
+                
+                
+                
+ 814D           ;********************************************************* 
+ 814D           ;*           서브 루틴: DISFONT                                 * 
+ 814D           ;*           입       력: 없음                                         * 
+ 814D           ;*           출       력: LCD        * 
+ 814D           ;*           기       능: 글자 폰트를 읽어와 LCD에 표시          * 
+ 814D           ;********************************************************* 
+ 814D 7D00      DISFONT:     MOV      R5,#00H       
+ 814F 852582    FLOOP:       MOV      DPL,FDPL
+ 8152 852683                   MOV      DPH,FDPH 
+ 8155 ED                       MOV      A,R5 
+ 8156 93                      MOVC     A,@A+DPTR 
+ 8157 F521                                     MOV      DATA,A  
+ 8159 12818A                  CALL     DATAWR 
+ 815C 0D                      INC      R5 
+ 815D ED                      MOV      A,R5 
+ 815E B524EE                  CJNE     A,NUMFONT,FLOOP 
+ 8161 22                      RET        
+                
+                
+ 8162           ;********************************************************* 
+ 8162           ;*       서브 루틴: 커서의 위치 제어(CUR_MOV)                   * 
+ 8162           ;*       입       력: 커서의 행과 열 < LROW(행) ,LCOL(열) >       * 
+ 8162           ;*       출       력: LCD 화 면                                     *  
+ 8162           ;*       기       능: 커서 위치 조정                               * 
+ 8162           ;********************************************************* 
+ 8162 E522      CUR_MOV:     MOV      A,LROW 
+ 8164 B4010C                  CJNE     A,#01H, NEXT  
+ 8167 7480                   MOV      A ,#LINE_1  
+ 8169 2523                   ADD      A ,LCOL  
+ 816B F520                   MOV      INST,A  
+ 816D 128180                 CALL     INSTWR   
+ 8170 02817F                JMP      RET_POINT
+ 8173 B40209    NEXT:        CJNE     A,#02H, RET_POINT
+ 8176 74C0                     MOV      A ,#LINE_2
+ 8178 2523                     ADD      A ,LCOL 
+ 817A F520                    MOV      INST,A  
+ 817C 128180                  CALL     INSTWR  
+ 817F 22        RET_POINT:   RET 
+                
+                
+                
+ 8180           ;********************************************************* 
+ 8180           ;*         서브 루틴: INSTWR                                     * 
+ 8180           ;*         입       력: INST                                       * 
+ 8180           ;*         출       력: LCD 화 면                                   * 
+ 8180           ;*         기       능: LCD INSTRUCTION 레지스터 쓰기             * 
+ 8180           ;********************************************************* 
+ 8180 128194    INSTWR:      CALL      INSTRD
+ 8183 90FFE0                   MOV       DPTR,#LCDWIR 
+ 8186 E520                    MOV       A,INST 
+ 8188 F0                      MOVX      @DPTR,A 
+ 8189 22                       RET 
+ 818A           ;********************************************************* 
+ 818A           ;*          서브 루틴: DATAW                             * 
+ 818A           ;*          입       력: DATA                            *  
+ 818A           ;*          출       력: LCD 화 면                       * 
+ 818A           ;*          기       능: LCD DATA 레지스터 쓰기          * 
+ 818A           ;********************************************************* 
+ 818A 128194    DATAWR:      CALL      INSTRD 
+ 818D 90FFE1                  MOV       DPTR,#LCDWDR
+ 8190 E521                     MOV       A,DATA
+ 8192 F0                       MOVX      @DPTR,A
+ 8193 22                       RET 
+                
+                
+ 8194           ;********************************************************* 
+ 8194           ;*          서브 루틴: INSTRD                                     *  
+ 8194           ;*          입       력: 없음                                       * 
+ 8194           ;*          출       력: BUSY                                       * 
+ 8194           ;*          기       능: 비지 플래그/어드레스 읽기                 * 
+ 8194           ;********************************************************* 
+ 8194 90FFE2    INSTRD:      MOV       DPTR,#LCDRIR
+ 8197 E0                       MOVX      A,@DPTR 
+ 8198 20E7F9                  JB        ACC.7,INSTRD 
+ 819B 22                       RET                 
+ 819C           ;********************************************************* 
+ 819C           ;*         DEFINE  MESSAGE                               * 
+ 819C           ;********************************************************* 
+ 819C 444F2059  MESSAGE1:    DB  'D','O',' ','Y','O' 
+ 81A1 55522042                DB  'U','R',' ','B','E' 
+ 81A6 53542021                DB  'S','T',' ','!' 
+ 81AA 594F5520  MESSAGE2:    DB  'Y','O','U',' ','C'
+ 81AF 414E2044                 DB  'A','N',' ','D','O' 
+ 81B4 20495421                DB  ' ','I','T','!'              
                 
                 
                 
                 
  9F0B           ORG 9F0BH
- 9F0B 02805B    JMP SERVICE
- 9F0E           END
+ 9F0B 028130    JMP SERVICE
+                
+                
+ 9F0E 83        INDEX:      MOVC    A,@A+PC ;누산기는 1 ~ 24의 값을 가진다. 
+ 9F0F 22                    RET 
+ 9F10 17        KEYBASE:    DB ST             ;SW1,ST                   1
+ 9F11 16                    DB CODE           ;SW6,CODE                 2
+ 9F12 15                     DB DECKEY         ;SW11,CD                 3 
+ 9F13 14                    DB REG            ;SW15,REG                 4
+ 9F14 13                    DB GO             ;SW19,GO                  5 
+ 9F15 0C                    DB 0CH            ;SW2,C                    6 
+ 9F16 0D                    DB 0DH            ;SW7,D                    7 
+ 9F17 0E                    DB 0EH            ;SW12,E                   8 
+ 9F18 0F                    DB 0FH           ;SW16,F                   9  
+ 9F19 11                   DB INCKEY         ;SW20,COMMA (,)          10  
+ 9F1A 08                   DB 08H            ;SW3,8                    11 
+ 9F1B 09                    DB 09H            ;SW8,9                    12 
+ 9F1C 0A                   DB 0AH            ;SW13,A                  13   
+ 9F1D 0B                  DB 0BH            ;SW17,B                  14    
+ 9F1E 12                 DB ENDKEY         ;SW21,PERIOD(.)          15    
+ 9F1F 04                 DB 04H           ;SW4,4                    16    
+ 9F20 05                 DB 05H            ;SW9,5                    17  
+ 9F21 06                   DB 06H            ;SW14,6                  18
+ 9F22 07                     DB 07H            ;SW18,7                  19
+ 9F23 10                     DB RWKEY          ;SW22,R/W                20 
+ 9F24 00                    DB 00H            ;SW5,0                    21 
+ 9F25 01                    DB 01H            ;SW10,1                  22  
+ 9F26 02                   DB 02H            ;SW24,2                  23 
+ 9F27 03                    DB 03H            ;SW23,3                  24 
+ 9F28                      ;DB RST            ;SW24  RST KEY           25                      
+ 9F28           END 
+
 
  PUSAN NATIONAL UNIVERSITY  8051 CROSS-ASSEMBLER        VERSION 1.20
 
