@@ -23,7 +23,7 @@ VSEC       EQU     30H  ; 오른쪽 2개의 7_SEGMENT에 표시 될 값 보관
 VMIN       EQU     31H  ; 중간 2개의 7_SEGMENT에 표시 될 값 보관  
 VHOUR      EQU     32H  ; 왼쪽 2개의 7_SEGMENT에 표시 될 값 보관 
 VBUF       EQU     33H  ; 임시 보관 장소 
-
+VX         EQU     34H
 ;HOUR EQU      80H
 ;MIN  EQU      81H
 ;SEC  EQU      82H
@@ -62,21 +62,21 @@ LCD_INIT:    MOV      INST,#FUN5
 
 ; Initial message 
 LCD_MESG:    MOV      LROW,#01H
-               MOV      LCOL,#02H
-               CALL     CUR_MOV
-               MOV      DPTR,#MESSAGE1
-              MOV      FDPL,DPL
-              MOV      FDPH,DPH
-              MOV      NUMFONT,#0EH
-               CALL     DISFONT
-               MOV      LROW,#02H
-              MOV      LCOL,#02H
-               CALL     CUR_MOV
-                MOV      DPTR,#MESSAGE2
-               MOV      FDPL,DPL
-               MOV      FDPH,DPH
-                MOV      NUMFONT,#0EH
-               CALL     DISFONT               
+             MOV      LCOL,#02H
+             CALL     CUR_MOV
+             MOV      DPTR,#MESSAGE1
+             MOV      FDPL,DPL
+             MOV      FDPH,DPH
+             MOV      NUMFONT,#0EH
+             CALL     DISFONT
+             MOV      LROW,#02H
+             MOV      LCOL,#02H
+             CALL     CUR_MOV
+             MOV      DPTR,#MESSAGE2
+             MOV      FDPL,DPL
+             MOV      FDPH,DPH
+             MOV      NUMFONT,#0EH
+             CALL     DISFONT               
 ;JMP      $ 
 
 MOV TMOD,#00000001B
@@ -85,8 +85,6 @@ MOV IE,#10000010B
 ;ENABLE ONLY TIMER 0
 MOV TH0,#4CH
 MOV TL0,#00H
-CLR C
-SETB TCON.TR0
 MOV A #14H
 ;JMP $
 
@@ -97,16 +95,16 @@ MOV     VMIN,#51H  ; VMIN의  초기화
 MOV     VSEC,#00H  ; VSEC의  초기화            
 CALL    DISPLAY 
 
-
+MOV VX #06
 MAIN:      CALL    FINDKEYCODE   ; 키코드 값을 읽어오는 루틴 호출
-           JB      ACC.4, ERR    ; 함수 키 이면, 에러 표시
+           ;JB      ACC.4, ERR    ; 함수 키 이면, 에러 표시
            MOV     VBUF, A       ; 읽어온 키 코드 값을 VBUF에 보관
            CALL    SHIFT         ; 표시 이동 루틴 호출
            CALL    DISPLAY       ; 이동된 값을 표시
            CALL    BOUNCE        ; 바운스 현상을 없애기 위한 루틴 호출
-           JMP     MAIN          ; 반복 동작을 위한 분기 
-
-
+           DJNZ    VX,MAIN          ; 반복 동작을 위한 분기 
+SETB TCON.TR0
+JMP $
 
 ERR:       CALL    ERROR         ; 에러 표시 루틴 호출
              JMP     MAIN          ; 메인 루틴으로 복귀
@@ -128,11 +126,11 @@ RELOAD:    MOV     A,#0          ; 키가 떨어 졌는지 체크
 ;*                    끄고 켜기를 반복              * 
 ;**************************************************** 
 ERROR:     MOV     R4,#REP_COUNT  
-ERR_1:               MOV     VSEC,#0 
+ERR_1:     MOV     VSEC,#0 
            MOV     VMIN,#0
-            MOV     VHOUR,#0
-            CALL    DISPLAY       ; 6개의 7_SEGMENT 켜기
-                    MOV     R3,#10
+           MOV     VHOUR,#0
+           CALL    DISPLAY       ; 6개의 7_SEGMENT 켜기
+           MOV     R3,#10
 FIRST:    CALL    DELAY 
            DJNZ    R3,FIRST      ; 일정 시간 지연  
            MOV     VSEC , #0FFH 
@@ -141,9 +139,9 @@ FIRST:    CALL    DELAY
            CALL    DISPLAY       ; 6개의 7_SEGMENT 켜기   
            MOV     R3,#10       
 SECOND:    CALL    DELAY 
-                    DJNZ    R3,SECOND     ; 일정 시간 지연  
+           DJNZ    R3,SECOND     ; 일정 시간 지연  
            DJNZ    R4,ERR_1      ; 반복 횟수 만큼 반복 했는지 체크 
-            RET                   ; 상위 루틴으로 복귀 
+           RET                   ; 상위 루틴으로 복귀 
 
 ;*************************************************** 
 ;*         서브 루틴 : DELAY                       * 
@@ -220,6 +218,8 @@ MATRIX:     MOV     A,R2         ; R2에는 행의 값 보존
             CALL    INDEX        ; 키 코드 값을 지정 
             POP     PSW          ; 스택으로 부터 PSW 값을 가지고 옴 
             RET                  ; 상위 루틴으로 복귀 
+
+
 ;***************************************************************** 
 ;*          서브 루틴 : SUBKEY                                   * 
 ;*               입력 : ACC                                      * 
@@ -271,9 +271,42 @@ RST         EQU     18H ;RST KEY
 ; 무한루프를 돌다가 Interrupt 발생 시 SERVICE 루틴으로 가게 된다.
 SERVICE: CLR TCON.TR0
 DJNZ A SERVICE2
-MOV A #14H
+
 INC VSEC
-CALL DISPLAY
+MOV A,VSEC
+CLR C
+CLR AC
+DA A
+CLR C
+CLR AC
+MOV VSEC,A
+CJNE A, #60H, RETIP
+MOV VSEC,#00
+
+INC VMIN
+MOV A,VMIN
+CLR C
+CLR AC
+DA A
+CLR C
+CLR AC
+MOV VMIN,A
+CJNE A, #60H, RETIP
+MOV VMIN,#00
+
+INC VHOUR
+MOV A,VHOUR
+CLR C
+CLR AC
+DA A
+CLR C
+CLR AC
+MOV VHOUR,A
+CJNE A, #24H, RETIP
+MOV VHOUR,#00
+
+RETIP: CALL DISPLAY
+MOV A #14H
 MOV TH0,#3CH
 MOV TL0,#0AFH
 SETB TCON.TR0
@@ -296,15 +329,15 @@ RETI
 ;********************************************************* 
 DISFONT:     MOV      R5,#00H       
 FLOOP:       MOV      DPL,FDPL
-               MOV      DPH,FDPH 
-               MOV      A,R5 
-              MOVC     A,@A+DPTR 
-                               MOV      DATA,A  
-              CALL     DATAWR 
-              INC      R5 
-              MOV      A,R5 
-              CJNE     A,NUMFONT,FLOOP 
-              RET        
+             MOV      DPH,FDPH 
+             MOV      A,R5 
+             MOVC     A,@A+DPTR 
+             MOV      DATA,A  
+             CALL     DATAWR 
+             INC      R5 
+             MOV      A,R5 
+             CJNE     A,NUMFONT,FLOOP 
+             RET        
 
 
 ;********************************************************* 
