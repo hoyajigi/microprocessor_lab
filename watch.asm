@@ -24,12 +24,13 @@ VMIN       EQU     31H  ; 중간 2개의 7_SEGMENT에 표시 될 값 보관
 VHOUR      EQU     32H  ; 왼쪽 2개의 7_SEGMENT에 표시 될 값 보관 
 VBUF       EQU     33H  ; 임시 보관 장소 
 VX         EQU     34H
-;HOUR EQU      80H
-;MIN  EQU      81H
-;SEC  EQU      82H
 
-;상수 정의  
-REP_COUNT EQU     5 
+AHOUR EQU      80H
+AMIN  EQU      81H
+ASEC  EQU      82H
+
+
+rand8reg EQU 80H		;one byte
 
 
 ; DEFINE LCD INSTRUCTION  ;******************************************************************** 
@@ -106,8 +107,23 @@ MAIN:      CALL    FINDKEYCODE   ; 키코드 값을 읽어오는 루틴 호출
 SETB TCON.TR0
 JMP $
 
-ERR:       CALL    ERROR         ; 에러 표시 루틴 호출
-             JMP     MAIN          ; 메인 루틴으로 복귀
+
+
+;generates an 8 bit pseudo-random number which is returned in Acc.
+;one byte of memory must be available for rand8reg
+
+rand8:	MOV	rand8reg, A
+	jnz	rand8b
+	cpl	A
+	MOV	A, rand8reg
+
+rand8b:	anl	A, #10111000b
+	mov	p, c
+	MOV	rand8reg, A
+	rlc	A
+	MOV	A ,rand8reg
+	ret
+
   
            ; 눌러진 키가 떨어질 때까지 일정 시간 지연 
 BOUNCE:    CALL    DELAY         ; 시간 지연 루틴 호출    
@@ -118,30 +134,6 @@ RELOAD:    MOV     A,#0          ; 키가 떨어 졌는지 체크
            CALL    DELAY         ; 시간 지연 루틴 호출
            RET                   ; 상위 루틴으로 복귀
 
-;**************************************************** 
-;*        서브 루틴 : ERROR                         * 
-;*             입력 : 없음                          * 
-;*             출력 : 7_SEGMENT                     * 
-;*             기능 : REP_COUNT 에 지정된 횟수만큼  * 
-;*                    끄고 켜기를 반복              * 
-;**************************************************** 
-ERROR:     MOV     R4,#REP_COUNT  
-ERR_1:     MOV     VSEC,#0 
-           MOV     VMIN,#0
-           MOV     VHOUR,#0
-           CALL    DISPLAY       ; 6개의 7_SEGMENT 켜기
-           MOV     R3,#10
-FIRST:    CALL    DELAY 
-           DJNZ    R3,FIRST      ; 일정 시간 지연  
-           MOV     VSEC , #0FFH 
-           MOV     VMIN , #0FFH 
-           MOV     VHOUR, #0FFH 
-           CALL    DISPLAY       ; 6개의 7_SEGMENT 켜기   
-           MOV     R3,#10       
-SECOND:    CALL    DELAY 
-           DJNZ    R3,SECOND     ; 일정 시간 지연  
-           DJNZ    R4,ERR_1      ; 반복 횟수 만큼 반복 했는지 체크 
-           RET                   ; 상위 루틴으로 복귀 
 
 ;*************************************************** 
 ;*         서브 루틴 : DELAY                       * 
