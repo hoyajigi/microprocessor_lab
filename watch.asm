@@ -30,8 +30,13 @@ AMIN  EQU      81H
 ASEC  EQU      82H
 
 
-rand8reg EQU 80H		;one byte
+rand8reg EQU 83H		;one byte
 
+VRANDOM1 EQU 90H
+VRANDOM2 EQU 91H
+VRANDOM3 EQU 92H
+
+VRANDOM EQU 93H
 
 ; DEFINE LCD INSTRUCTION  ;******************************************************************** 
 CLEAR  EQU     01H  ; CLEAR 명령  
@@ -61,29 +66,12 @@ LCD_INIT:    MOV      INST,#FUN5
              MOV      INST,#ENTRY2 
              CALL     INSTWR       
 
-; Initial message 
-LCD_MESG:    MOV      LROW,#01H
-             MOV      LCOL,#02H
-             CALL     CUR_MOV
-             MOV      DPTR,#MESSAGE1
-             MOV      FDPL,DPL
-             MOV      FDPH,DPH
-             MOV      NUMFONT,#0EH
-             CALL     DISFONT
-             MOV      LROW,#02H
-             MOV      LCOL,#02H
-             CALL     CUR_MOV
-             MOV      DPTR,#MESSAGE2
-             MOV      FDPL,DPL
-             MOV      FDPH,DPH
-             MOV      NUMFONT,#0EH
-             CALL     DISFONT               
-;JMP      $ 
 
-MOV TMOD,#00000001B
-;GATE =0,TIMER MODE,RUN MODE 01
-MOV IE,#10000010B
-;ENABLE ONLY TIMER 0
+
+
+
+MOV TMOD,#00000001B;GATE =0,TIMER MODE,RUN MODE 01
+MOV IE,#10000010B;ENABLE ONLY TIMER 0
 MOV TH0,#4CH
 MOV TL0,#00H
 MOV A #14H
@@ -124,6 +112,29 @@ rand8b:	anl	A, #10111000b
 	MOV	A ,rand8reg
 	ret
 
+; Initial message 
+LCD_MESG: CALL rand8
+MOV A,rand8reg
+MOV B,#100
+DIV AB
+ADD A,#48
+MOV VRANDOM1,A
+MOV A,B
+MOV B,#10
+DIV AB
+ADD A,#48
+MOV VRANDOM2,A
+MOV A,B
+ADD A,#48
+MOV VRANDOM3,A
+MOV      LROW,#01H
+             MOV      LCOL,#00H
+             CALL     CUR_MOV
+             MOV      DPTR,#90H
+             MOV      FDPL,DPL
+             MOV      FDPH,DPH
+             MOV      NUMFONT,#03H
+             CALL     DISFONT
   
            ; 눌러진 키가 떨어질 때까지 일정 시간 지연 
 BOUNCE:    CALL    DELAY         ; 시간 지연 루틴 호출    
@@ -301,6 +312,7 @@ RETIP: CALL DISPLAY
 MOV A #14H
 MOV TH0,#3CH
 MOV TL0,#0AFH
+CALL LCD_MESG
 SETB TCON.TR0
 RETI
 
@@ -388,15 +400,6 @@ INSTRD:      MOV       DPTR,#LCDRIR
                MOVX      A,@DPTR 
               JB        ACC.7,INSTRD 
                RET                 
-;********************************************************* 
-;*         DEFINE  MESSAGE                               * 
-;********************************************************* 
-MESSAGE1:    DB  'D','O',' ','Y','O' 
-              DB  'U','R',' ','B','E' 
-              DB  'S','T',' ','!' 
-MESSAGE2:    DB  'Y','O','U',' ','C'
-               DB  'A','N',' ','D','O' 
-              DB  ' ','I','T','!'              
 
 
 
