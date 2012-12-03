@@ -26,15 +26,16 @@ VBUF       EQU     33H  ; 임시 보관 장소
 VX         EQU     34H
 
 AHOUR EQU      80H
-AMIN  EQU      81H
-ASEC  EQU      82H
+;AMIN  EQU      81H
+;ASEC  EQU      82H
 
 
 rand8reg EQU 83H		;one byte
 
 VRANDOM1 EQU 90H
-VRANDOM2 EQU 91H
-VRANDOM3 EQU 92H
+VOP      EQU 91H
+VRANDOM2 EQU 92H
+VRANDOM3 EQU 93H
 
 VRANDOM EQU 93H
 
@@ -75,6 +76,7 @@ MOV IE,#10000010B;ENABLE ONLY TIMER 0
 MOV TH0,#4CH
 MOV TL0,#00H
 MOV A #14H
+MOV VOP, #2AH
 ;JMP $
 
 
@@ -93,6 +95,9 @@ MAIN:      CALL    FINDKEYCODE   ; 키코드 값을 읽어오는 루틴 호출
            CALL    BOUNCE        ; 바운스 현상을 없애기 위한 루틴 호출
            DJNZ    VX,MAIN          ; 반복 동작을 위한 분기 
 SETB TCON.TR0
+CALL    FINDKEYCODE   ; 키코드 값을 읽어오는 루틴 호출
+MOV     AHOUR, A       ; 읽어온 키 코드 값을 VBUF에 보관
+
 JMP $
 
 
@@ -112,30 +117,62 @@ rand8b:	anl	A, #10111000b
 	MOV	A ,rand8reg
 	ret
 
-; Initial message 
-LCD_MESG: CALL rand8
+MAKERANDOMNUMBER:
+CALL rand8
 MOV A,rand8reg
-MOV B,#100
-DIV AB
-ADD A,#48
-MOV VRANDOM1,A
-MOV A,B
 MOV B,#10
 DIV AB
+MOV VRANDOM1,A
+MOV A,B
+MOV VRANDOM2,A
+MOV B,VRANDOM1
+MUL AB
+MOV VRANDOM3,A
+
+MOV A,VRANDOM1
+ADD A,#48
+MOV VRANDOM1,A
+MOV A,VRANDOM2
 ADD A,#48
 MOV VRANDOM2,A
-MOV A,B
+MOV A,VRANDOM3
 ADD A,#48
 MOV VRANDOM3,A
+RET
+
+; Initial message 
+LCD_MESG: 
+CALL STARTMOTOR
+CALL MAKERANDOMNUMBER
 MOV      LROW,#01H
-             MOV      LCOL,#00H
-             CALL     CUR_MOV
+         MOV      LCOL,#00H
+         CALL     CUR_MOV
+
              MOV      DPTR,#90H
              MOV      FDPL,DPL
              MOV      FDPH,DPH
              MOV      NUMFONT,#03H
              CALL     DISFONT
   
+
+
+LCDKP:	   CALL    FINDKEYCODE   ; 키코드 값을 읽어오는 루틴 호출
+           ;CALL    SHIFT         ; 표시 이동 루틴 호출
+	CJNE A,VRANDOM3,LCDJP
+
+           
+LCDRP: CALL STOPMOTOR
+          RET                   ; 상위 루틴으로 복귀
+
+LCDJP:  MOV VX,A
+MOV A,VBUF
+MOV B,#10
+MUL AB
+ADD A,VX
+	MOV     VBUF, VX       ; 읽어온 키 코드 값을 VBUF에 보관
+        CJNE A,VRANDOM3,LCDKP	
+SJMP LCDRP
+
            ; 눌러진 키가 떨어질 때까지 일정 시간 지연 
 BOUNCE:    CALL    DELAY         ; 시간 지연 루틴 호출    
 RELOAD:    MOV     A,#0          ; 키가 떨어 졌는지 체크
@@ -143,7 +180,6 @@ RELOAD:    MOV     A,#0          ; 키가 떨어 졌는지 체크
                    CPL     A
             JNZ     RELOAD        ; 키가 떨어지지 않았으면, 다시 체크  
            CALL    DELAY         ; 시간 지연 루틴 호출
-           RET                   ; 상위 루틴으로 복귀
 
 
 ;*************************************************** 
@@ -235,6 +271,7 @@ SUBKEY:     MOV     DPTR,#DATAOUT
             MOV     DPTR,#DATAIN 
             MOVX    A,@DPTR 
             RET 
+
 ;***************************************************************** 
 ;*          서브 루틴 : DISPLAY                                  * 
 ;*               입력 : ACC                                      * 
@@ -272,7 +309,7 @@ RST         EQU     18H ;RST KEY
 
 
 ; 무한루프를 돌다가 Interrupt 발생 시 SERVICE 루틴으로 가게 된다.
-SERVICE: CLR TCON.TR0
+SERVICE: SETB TCON.TR0
 DJNZ A SERVICE2
 
 INC VSEC
@@ -308,11 +345,19 @@ MOV VHOUR,A
 CJNE A, #24H, RETIP
 MOV VHOUR,#00
 
-RETIP: CALL DISPLAY
+RETIP: 
+MOV A,AHOUR
+CJNE A, VHOUR, RETIP2
+MOV A,#00H
+CJNE A, VMIN, RETIP2
+CJNE A, VSEC, RETIP2
+CALL LCD_MESG
+
+RETIP2:
+CALL DISPLAY
 MOV A #14H
 MOV TH0,#3CH
 MOV TL0,#0AFH
-CALL LCD_MESG
 SETB TCON.TR0
 RETI
 
@@ -326,8 +371,8 @@ RETI
 
 
 ;********************************************************* 
-;*           서브 루틴: DISFONT                                 * 
-;*           입       력: 없음                                         * 
+;*           서브 루틴: DISFONT                          * 
+;*           입       력: 없음                           * 
 ;*           출       력: LCD        * 
 ;*           기       능: 글자 폰트를 읽어와 LCD에 표시          * 
 ;********************************************************* 
@@ -336,7 +381,7 @@ FLOOP:       MOV      DPL,FDPL
              MOV      DPH,FDPH 
              MOV      A,R5 
              MOVC     A,@A+DPTR 
-             MOV      DATA,A  
+             MOV      DATA,A
              CALL     DATAWR 
              INC      R5 
              MOV      A,R5 
@@ -345,7 +390,7 @@ FLOOP:       MOV      DPL,FDPL
 
 
 ;********************************************************* 
-;*       서브 루틴: 커서의 위치 제어(CUR_MOV)                   * 
+;*       서브 루틴: 커서의 위치 제어(CUR_MOV)            * 
 ;*       입       력: 커서의 행과 열 < LROW(행) ,LCOL(열) >       * 
 ;*       출       력: LCD 화 면                                     *  
 ;*       기       능: 커서 위치 조정                               * 
@@ -397,9 +442,22 @@ DATAWR:      CALL      INSTRD
 ;*          기       능: 비지 플래그/어드레스 읽기                 * 
 ;********************************************************* 
 INSTRD:      MOV       DPTR,#LCDRIR
-               MOVX      A,@DPTR 
-              JB        ACC.7,INSTRD 
-               RET                 
+             MOVX      A,@DPTR 
+             JB        ACC.7,INSTRD 
+             RET                 
+
+
+
+; 모터 정 회전 
+STARTMOTOR: MOV     A,#00000110B   
+            CALL     MOTOR  
+; 모터 회전 정지                              
+STOPMOTOR: MOV    A,#00000000B   
+           CALL     MOTOR             
+
+MOTOR:     MOV     DPTR,#0FFEFH
+           MOVX    @DPTR,A
+           RET 
 
 
 
