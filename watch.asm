@@ -120,7 +120,7 @@ rand8b:	anl	A, #10111000b
 MAKERANDOMNUMBER:
 CALL rand8
 MOV A,rand8reg
-MOV B,#10
+MOV B,#0AH
 DIV AB
 MOV VRANDOM1,A
 MOV A,B
@@ -148,13 +148,15 @@ MOV      LROW,#01H
          MOV      LCOL,#00H
          CALL     CUR_MOV
 
-             MOV      DPTR,#90H
-             MOV      FDPL,DPL
-             MOV      FDPH,DPH
-             MOV      NUMFONT,#03H
-             CALL     DISFONT
-  
-
+MOV DATA,VRANDOM1
+CALL DATAWR
+MOV DATA,VOP     
+CALL DATAWR
+MOV DATA,VRANDOM2
+CALL DATAWR
+MOV DATA,VRANDOM3
+CALL DATAWR
+RET
 
 LCDKP:	   CALL    FINDKEYCODE   ; 키코드 값을 읽어오는 루틴 호출
            ;CALL    SHIFT         ; 표시 이동 루틴 호출
@@ -321,7 +323,7 @@ CLR C
 CLR AC
 MOV VSEC,A
 CJNE A, #60H, RETIP
-MOV VSEC,#00
+MOV VSEC,#00H
 
 INC VMIN
 MOV A,VMIN
@@ -332,7 +334,7 @@ CLR C
 CLR AC
 MOV VMIN,A
 CJNE A, #60H, RETIP
-MOV VMIN,#00
+MOV VMIN,#00H
 
 INC VHOUR
 MOV A,VHOUR
@@ -343,14 +345,15 @@ CLR C
 CLR AC
 MOV VHOUR,A
 CJNE A, #24H, RETIP
-MOV VHOUR,#00
+MOV VHOUR,#00H
 
 RETIP: 
-MOV A,AHOUR
-CJNE A, VHOUR, RETIP2
-MOV A,#00H
-CJNE A, VMIN, RETIP2
-CJNE A, VSEC, RETIP2
+MOV A,VHOUR
+CJNE A, #06H, RETIP2
+;MOV A,#00H
+;CJNE A, VMIN, RETIP2
+;CJNE A, VSEC, RETIP2
+SETB TCON.TR0
 CALL LCD_MESG
 
 RETIP2:
@@ -451,10 +454,11 @@ INSTRD:      MOV       DPTR,#LCDRIR
 ; 모터 정 회전 
 STARTMOTOR: MOV     A,#00000110B   
             CALL     MOTOR  
+	RET
 ; 모터 회전 정지                              
 STOPMOTOR: MOV    A,#00000000B   
            CALL     MOTOR             
-
+	RET
 MOTOR:     MOV     DPTR,#0FFEFH
            MOVX    @DPTR,A
            RET 
